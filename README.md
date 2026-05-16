@@ -89,4 +89,6 @@ ironbee-backend-devtools-cli --port 2022 db connect --name main --type postgres 
 
 ## License
 
-Elastic License 2.0 (ELv2)
+[MIT](./LICENSE)
+
+The skill content (Markdown documentation) is MIT-licensed. Note that the upstream [IronBee DevTools](https://github.com/ironbee-ai/ironbee-devtools) project itself is distributed under Elastic License 2.0 (ELv2) — this repository's MIT license covers only the agent-facing documentation here, not the CLI binaries it documents.

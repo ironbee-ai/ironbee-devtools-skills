@@ -1,0 +1,125 @@
+# Manually-triggered release workflow.
+#
+# Bumps the latest `vMAJOR.MINOR.PATCH` git tag and pushes the new tag,
+# then creates a GitHub Release with auto-generated notes.
+#
+# Version state lives in git tags only — there is no `version` field in a
+# JSON file. That keeps a single source of truth (git tags) and avoids the
+# drift between an in-repo number and the actual tag history.
+#
+# Trigger from the Actions tab → "Release" → "Run workflow" → choose
+# patch / minor / major.
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version part to bump"
+        type: choice
+        required: true
+        options:
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: "Dry run (compute new version, do not tag or release)"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Compute next version
+        id: bump
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+
+          # Latest semver tag (vMAJOR.MINOR.PATCH); default to v0.0.0 if none.
+          latest="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1 || true)"
+          if [ -z "$latest" ]; then
+            latest="v0.0.0"
+            echo "No prior semver tag found — starting from v0.0.0."
+          else
+            echo "Latest tag: $latest"
+          fi
+
+          # Strip leading 'v' and split.
+          version="${latest#v}"
+          IFS='.' read -r major minor patch <<< "$version"
+
+          case "$BUMP" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+            *) echo "::error::Invalid bump: $BUMP"; exit 1 ;;
+          esac
+
+          next="v${major}.${minor}.${patch}"
+          echo "Next tag: $next"
+
+          # Guard: refuse if the tag somehow already exists.
+          if git rev-parse -q --verify "refs/tags/${next}" >/dev/null; then
+            echo "::error::Tag ${next} already exists on origin or locally."
+            exit 1
+          fi
+
+          {
+            echo "previous=${latest}"
+            echo "next=${next}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Show planned release
+        run: |
+          echo "Previous: ${{ steps.bump.outputs.previous }}"
+          echo "Next:     ${{ steps.bump.outputs.next }}"
+          echo "Bump:     ${{ inputs.bump }}"
+          echo "Dry run:  ${{ inputs.dry_run }}"
+
+      - name: Create and push tag
+        if: ${{ inputs.dry_run != true }}
+        env:
+          NEXT: ${{ steps.bump.outputs.next }}
+          PREVIOUS: ${{ steps.bump.outputs.previous }}
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$NEXT" -m "Release $NEXT (${BUMP} bump from ${PREVIOUS})"
+          git push origin "$NEXT"
+
+      - name: Create GitHub Release
+        if: ${{ inputs.dry_run != true }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT: ${{ steps.bump.outputs.next }}
+          PREVIOUS: ${{ steps.bump.outputs.previous }}
+        run: |
+          set -euo pipefail
+          # `--generate-notes` builds release notes from PRs / commits between
+          # the previous tag and this one. Falls back to a stub if there is
+          # no prior tag in history (--generate-notes still works against the
+          # full history in that case).
+          gh release create "$NEXT" \
+            --title "$NEXT" \
+            --generate-notes \
+            --verify-tag
