@@ -4,8 +4,8 @@ Reusable JavaScript scripts stored on disk and runnable by name. They share the 
 
 ## Storage
 
-- **Project scope** (default): `${WORKING_DIR}/.ironbee-devtools-mcp/scenarios.json`
-- **Global scope**: `~/.ironbee-devtools-mcp/scenarios.json`
+- **Project scope** (default): `${WORKING_DIR}/.ironbee-devtools/scenarios.json`
+- **Global scope**: `~/.ironbee-devtools/scenarios.json`
 - `WORKING_DIR` defaults to `process.cwd()` and is configurable via env var.
 - Resolution order for `scenario-run`: project first, then global.
 

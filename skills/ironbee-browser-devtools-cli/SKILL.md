@@ -81,7 +81,7 @@ The CLI provides tools organized by domain:
 
 **Execute** is available in both **CLI** and **MCP**. Use it to run JavaScript and batch tool calls: CLI `run execute --code "<js>"` (or `--file <path>`, optionally `--timeout-ms`); MCP tool `execute` with the same params. Inside the VM: **`page`** (browser only) — Playwright Page; use `await page.title()`, `await page.evaluate(...)`, etc. **`callTool(name, input, returnOutput?)`** — invoke any tool; **always `await`**; `name` is underscore form (e.g. `'navigation_go-to'`); `input` is an object (camelCase keys); `returnOutput: true` adds the result to the response `toolOutputs`. See [execute reference](./references/execute.md) for full bindings and args.
 
-**Scenarios** are reusable JS scripts stored in `${WORKING_DIR}/.ironbee-devtools-mcp/scenarios.json` (project) or `~/.ironbee-devtools-mcp/scenarios.json` (global). They run inside the same VM as `execute` (with the same `callTool` and `page` bindings). See [scenario reference](./references/scenario.md).
+**Scenarios** are reusable JS scripts stored in `${WORKING_DIR}/.ironbee-devtools/scenarios.json` (project) or `~/.ironbee-devtools/scenarios.json` (global). They run inside the same VM as `execute` (with the same `callTool` and `page` bindings). See [scenario reference](./references/scenario.md).
 
 ## CLI Management Commands
 
